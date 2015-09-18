@@ -1,3 +1,5 @@
+#http://www.r-bloggers.com/how-to-perform-a-logistic-regression-in-r/
+#http://www.r-bloggers.com/evaluating-logistic-regression-models/
 options(java.parameters = "- Xmx1024m")
 library(lubridate)
 library(chron)
