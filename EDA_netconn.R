@@ -16,8 +16,11 @@ library(ggplot2)
 library(caret)
 library(bitops)
 library(lubridate)
+library(vcd)
+library(rpart)
 
-netconn <- read.csv("~/Datasets/1.netconn.csv", stringsAsFactors=TRUE)
+
+netconn <- read.csv("~/Documents/Datasets/R-code/Datasets/1.netconn.csv", stringsAsFactors=TRUE)
 dim(netconn)
 netconn<-as.data.frame(netconn)
 
@@ -118,16 +121,16 @@ netconn$Remote_port<-as.integer(netconn$Remote_port)
 netconn$Path_new<-extract_path(netconn$Path)
 
 # -------------- start count metrics calculation -----------------------
-datatable(netconn, filter = 'top', options = list(pageLength = 5, autoWidth = TRUE))
+DT::datatable(netconn, filter = 'top', options = list(pageLength = 5, autoWidth = TRUE))
 
 
-library(dplyr)
+
 netconn.select <- netconn %>% dplyr::select(Hostname,Process_name,Remote_IP_address,Remote_port)
 
 xtabs(~ Username+Host_type + Os_type, data = netconn)
 
 
-(HEC <- structable(~Username+ +Host_type+Os_type, data = netconn))
+(HEC <- vcd::structable(~Username+ +Host_type+Os_type, data = netconn))
 mosaic(HEC)
 mosaic(xtabs( ~ Os_type+Username, data = netconn))
 rmb(~ Os_type + Host_type, data = netconn)
@@ -173,7 +176,7 @@ plot(netconn.mod1, main="Model [AGC][S]")
 
 netconn.group_by<-netconn.select %>% 
                               dplyr:: group_by(Hostname,Process_name,Remote_port) %>%
-                              summarize(RemoteIPs=n_distinct(Remote_IP_address))  %>% as.data.frame
+                              dplyr::summarize(RemoteIPs=n_distinct(Remote_IP_address))  %>% as.data.frame
                                             #Username,Path_new,Host_type,Os_type,Remote_IP_address,Remote_port,Protocol)
 head(netconn.select)
 
