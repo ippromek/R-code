@@ -18,7 +18,9 @@ library(bitops)
 library(lubridate)
 library(vcd)
 library(rpart)
-
+library(rpart.plot)
+library(partykit)
+library(Formula)
 
 netconn <- read.csv("~/Documents/Datasets/R-code/Datasets/1.netconn.csv", stringsAsFactors=TRUE)
 dim(netconn)

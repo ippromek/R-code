@@ -1,7 +1,7 @@
 
 attach(netconn)
 
-netconn.glm <- netconn %>% dplyr::select(Os_type, Username, Process_name)
+netconn.glm <- netconn %>% dplyr::select(Os_type,Host_type)
 #datatable(head(netconn.glm,10))
 #-------- dummy varibales ------------------
 dummies<-dummyVars( ~ Username+Process_name, data=netconn.glm)
@@ -21,6 +21,46 @@ mylogit <- glm(Os_type ~ .,data = netconn.glm, family = "binomial")
 summary(mylogit)
 #-----------------------------------------------------------------------
 
+#------------ decision trees------------------------------------------
+
+netconn.rpart <- netconn %>% dplyr::select(Host_type,Os_type,Username,Process_name)
+target<-c("Os_type")
+netconn.rpart[,target]<-as.integer(ifelse(netconn.rpart[,target]=="windows",1,0))
+#head(netconn.rpart)
+#--------------- inputs ----------------------------------------------
+vars<-colnames(netconn.rpart)
+inputs<-setdiff(vars,target) 
+#------------ training and testing datasets ---------------------------
+inTrain<-createDataPartition(y=netconn.rpart[,target], p=0.75, list=FALSE)
+rpart.training<-netconn.rpart[inTrain,]
+rpart.testing<-netconn.rpart[-inTrain,]
+#---------- testing target ------------------------------------------
+actual<-rpart.testing[,target]
+#length(actual)
+#dim(rpart.testing)
+#--------------- formula and model ---------------------------------
+form<-sample(paste(target,"~Username+Process_name"))
+myrpart <- rpart(formula=form,data=rpart.training , method="class")
+
+#myrpart_condition <- ctree(Os_type,data=rpart.training)
+#----------------- graph -------------------------------------------
+fancyRpartPlot(myrpart,main="OS type")
+summary(myrpart)
+printcp(myrpart)
+plotcp(myrpart)
+
+#--------- prediction on testing results --------------------------
+predicted<-predict(myrpart,rpart.testing,type="class")
+
+#---------- confucion matrix -------------------------------------
+round(100*table(actual,predicted,dnn=c("Actual","Predicted"))/length(predicted))
+confusionMatrix(table(predicted,actual)) 
+
+acc<-sum(predicted==rpart.testing[,target],na.rm=TRUE)/length(rpart.testing[,target])
+acc
+
+test<-as.party(myrpart)
+plot(test)
 
 
 
