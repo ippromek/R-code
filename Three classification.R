@@ -41,8 +41,12 @@ train$label <- as.factor(train$label)
 test %<>% predict(pc, .) %>% cbind(test$label, .) %>% as.data.frame(.) %>% select(1:71)
 colnames(test)[1]<- "label"
  #------------ 2 CPU in parallel -------------------------------------
+#detectCores()
+#cl <- makeCluster(detectCores())
+#registerDoParallel(cl)
 cl <- makePSOCKcluster(2)
 registerDoParallel(cl)
+#getDoParWorkers()
 #------------ KNN ---------------------------------------------------
 set.seed(111)
 train_1000 <- train[sample(nrow(train), size = 1000),]

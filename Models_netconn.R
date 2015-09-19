@@ -4,10 +4,10 @@ attach(netconn)
 netconn.glm <- netconn %>% dplyr::select(Os_type,Host_type)
 #datatable(head(netconn.glm,10))
 #-------- dummy varibales ------------------
-dummies<-dummyVars( ~ Username+Process_name, data=netconn.glm)
+#dummies<-dummyVars( ~ Username+Process_name, data=netconn.glm)
 #head(predict(dummies, newdata=netconn.glm))
-netconn.glm1<-data.frame(predict(dummies, newdata=netconn.glm))
-netconn.glm2<-cbind(netconn.glm[,1],netconn.glm1)
+#netconn.glm1<-data.frame(predict(dummies, newdata=netconn.glm))
+#netconn.glm2<-cbind(netconn.glm[,1],netconn.glm1)
 #colnames(netconn.glm2)[1]
 
 colnames(netconn.glm2)[1]<-c("Os_type")
@@ -45,26 +45,13 @@ fitControl <- trainControl(## 10-fold CV
   number = 10,
   ## repeated ten times
   repeats = 10)
-set.seed(825)
-
-
+set.seed(123)
 
 form<-sample(paste(target,"~Username+Process_name"))
-myrpart <- rpart(formula=form,data=rpart.training , method="class")
+myrpart <- rpart(formula=form,data=rpart.training ,control=rpart.control(maxdepth=2), method="class")
 
 head(rpart.training)
-myrpart_caret <- train(Host_type ~., data = rpart.training,
-                       method = "gbm")
 
-data(iris)
-tc <- trainControl("cv",10)
-rpart.grid <- expand.grid(.cp=0.2)
- 
-(train.rpart <- train(Species ~., data=iris, method="rpart",trControl=tc,tuneGrid=rpart.grid))
-
-
-                       
-                       
 #------------ conditional tree ---------------------------------
 #myrpart_condition <- ctree(Os_type,data=rpart.training)
 #----------------- graph -------------------------------------------
@@ -89,24 +76,71 @@ acc
 test<-as.party(myrpart)
 plot(test)
 
+#------------ GBM --------------------------------------------
+gbmTrain <- rpart.training
+# only 1 or 0
+gbmTrain[,target] <- as.integer(ifelse(gbmTrain[,target]=="windows",1,0))
+table(gbmTrain[,target])
+
+gbm.mod <- gbm(formula = Os_type~.,           # use all variables
+               distribution = "bernoulli",       # for a classification problem
+               data = gbmTrain,
+               n.trees = 2000,                         # 2000 boosting iterations
+               interaction.depth = 7,              # 7 splits for each tree
+               shrinkage = 0.01,                       # the learning rate parameter
+               verbose = FALSE)                        # Do not print the details
+summary(gbm.mod) 
+# ---------- use trainControl from caret ----------------------------------
+ctrl <- trainControl(method="repeatedcv",               # use repeated 10fold cross validation
+                     repeats=5,                          # do 5 repititions of 10-fold cv
+                     summaryFunction=twoClassSummary,    # Use AUC to pick the best model
+                     classProbs=TRUE)
+
+#---Use the expand.grid to specify the search space Note that the default search grid 
+#---selects 3 values of each tuning parameter
+grid <- expand.grid(interaction.depth = seq(1,4,by=2), # look at tree depths from 1 to 4
+                    n.trees=seq(10,100,by=10), # let iterations go from 10 to 100
+                    shrinkage=c(0.01,0.1),
+                    n.minobsinnode=1)         # Try 2 values of the learning rate parameter
+set.seed(1)
+registerDoParallel(4)       # Registrer a parallel backend for train
+getDoParWorkers()
+head(gbmTrain)
+
+system.time(gbm.tune <- train(x=gbmTrain[,c(1,3,4)],y=gbmTrain$Os_type,
+                              method = "gbm",
+                         #     metric = "ROC",
+                              trControl = ctrl,
+                              tuneGrid=grid,
+                              verbose=FALSE))
+
+ctrl <- trainControl(method = "cv", 
+                     summaryFunction = twoClassSummary, 
+                     classProbs = TRUE)
+head(gbmTrain)
+set.seed(1)
+fitControl <- trainControl(## 10-fold CV
+  method = "repeatedcv",
+  number = 10,
+  ## repeated ten times
+  repeats = 10)
+gbmTune <- train(Os_type ~ ., data = gbmTrain,
+                 method = "gbm",
+               #  metric = "ROC",
+                 verbose = FALSE,                    
+                 trControl = fitControl)
+
+
+system.time(gbmTune <- train(Os_type ~ ., data = gbmTrain,
+                             method = "gbm",
+                             metric = "ROC",
+                             verbose = FALSE,  
+                         #    tuneGrid=grid,
+                             trControl = ctrl))
+
 
 
 
 
 (factors<- which(sapply(netconn[vars], is.factor)))
 (lvls <- sapply(factors, function(x) length(levels(netconn[[x]]))))
-
-model.matrix(~Host_type,head(netconn))
-mainEffects <- dummyVars(~ Host_type+Os_type, data = netconn)
-summary(mainEffects)
-
-#-------------------------------
-#Generate example dataframe with character column
-example <- as.data.frame(c("A", "A", "B", "F", "C", "G", "C", "D", "E", "F"))
-names(example) <- "strcol"
-#For every unique value in the string column, create a new 1/0 column
-#This is what Factors do "under-the-hood" automatically when passed to function requiring numeric data
-for(level in unique(example$strcol)){
-  example[paste("dummy", level, sep = "_")] <- ifelse(example$strcol == level, 1, 0)
-}
-#-------------------------------
