@@ -21,6 +21,8 @@ library(rpart)
 library(rpart.plot)
 library(partykit)
 library(Formula)
+library(C50)
+library(randomForest)
 
 netconn <- read.csv("~/Documents/Datasets/R-code/Datasets/1.netconn.csv", stringsAsFactors=TRUE)
 dim(netconn)

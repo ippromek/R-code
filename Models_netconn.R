@@ -31,6 +31,7 @@ netconn.rpart[,target]<-as.integer(ifelse(netconn.rpart[,target]=="windows",1,0)
 vars<-colnames(netconn.rpart)
 inputs<-setdiff(vars,target) 
 #------------ training and testing datasets ---------------------------
+set.seed(998)
 inTrain<-createDataPartition(y=netconn.rpart[,target], p=0.75, list=FALSE)
 rpart.training<-netconn.rpart[inTrain,]
 rpart.testing<-netconn.rpart[-inTrain,]
@@ -39,12 +40,38 @@ actual<-rpart.testing[,target]
 #length(actual)
 #dim(rpart.testing)
 #--------------- formula and model ---------------------------------
+fitControl <- trainControl(## 10-fold CV
+  method = "repeatedcv",
+  number = 10,
+  ## repeated ten times
+  repeats = 10)
+set.seed(825)
+
+
+
 form<-sample(paste(target,"~Username+Process_name"))
 myrpart <- rpart(formula=form,data=rpart.training , method="class")
 
+head(rpart.training)
+myrpart_caret <- train(Host_type ~., data = rpart.training,
+                       method = "gbm")
+
+data(iris)
+tc <- trainControl("cv",10)
+rpart.grid <- expand.grid(.cp=0.2)
+ 
+(train.rpart <- train(Species ~., data=iris, method="rpart",trControl=tc,tuneGrid=rpart.grid))
+
+
+                       
+                       
+#------------ conditional tree ---------------------------------
 #myrpart_condition <- ctree(Os_type,data=rpart.training)
 #----------------- graph -------------------------------------------
 fancyRpartPlot(myrpart,main="OS type")
+prp(myrpart,type=2,extra = 101,nn=TRUE,fallen.leaves = TRUE,faclen=0,varlen=0,
+    shadow.col = "grey",branch.lty = 5)
+
 summary(myrpart)
 printcp(myrpart)
 plotcp(myrpart)
