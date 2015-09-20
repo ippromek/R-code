@@ -75,7 +75,7 @@ acc
 
 test<-as.party(myrpart)
 plot(test)
-
+########################################################
 #------------ GBM --------------------------------------------
 gbmTrain <- rpart.training
 # only 1 or 0
@@ -102,6 +102,7 @@ grid <- expand.grid(interaction.depth = seq(1,4,by=2), # look at tree depths fro
                     n.trees=seq(10,100,by=10), # let iterations go from 10 to 100
                     shrinkage=c(0.01,0.1),
                     n.minobsinnode=1)         # Try 2 values of the learning rate parameter
+
 set.seed(1)
 registerDoParallel(4)       # Registrer a parallel backend for train
 getDoParWorkers()
@@ -113,32 +114,80 @@ system.time(gbm.tune <- train(x=gbmTrain[,c(1,3,4)],y=gbmTrain$Os_type,
                               trControl = ctrl,
                               tuneGrid=grid,
                               verbose=FALSE))
-
-ctrl <- trainControl(method = "cv", 
-                     summaryFunction = twoClassSummary, 
-                     classProbs = TRUE)
-head(gbmTrain)
+########################################################
+#----------- SUPPORT VECTOR MACHINE --------------------------------
 set.seed(1)
-fitControl <- trainControl(## 10-fold CV
-  method = "repeatedcv",
-  number = 10,
-  ## repeated ten times
-  repeats = 10)
-gbmTune <- train(Os_type ~ ., data = gbmTrain,
-                 method = "gbm",
-               #  metric = "ROC",
-                 verbose = FALSE,                    
-                 trControl = fitControl)
+registerDoParallel(4,cores=4)
+getDoParWorkers()
+system.time(
+  svm.tune <- train(x=trainX,
+                    y= trainData$Class,
+                    method = "svmRadial",
+                    tuneLength = 9,                 # 9 values of the cost function
+                    preProc = c("center","scale"),
+                    metric="ROC",
+                    trControl=ctrl) # same as for gbm above
+)   
+
+svm.tune
+
+# Plot the SVM results
+plot(svm.tune,
+     metric="ROC",
+     scales=list(x=list(log=2)))
+#---------------------------------------------------
+# SVM Predictions
+svm.pred <- predict(svm.tune,testX)
+head(svm.pred)
+
+confusionMatrix(svm.pred,testData$Class)
+########################################################
+
+#--------- model comparison ------------------
+resampls = resamples(list(RF = trf,
+                          GBM = tgbm))
+
+difValues = diff(resampls)
+summary(difValues)
+
+#-------------- model comparison graphs -----------
+rValues <- resamples(list(svm=svm.tune,gbm=gbm.tune))
+rValues$values
+summary(rValues)
+trellis.par.set(caretTheme())
+xyplot(rValues,metric="ROC")        # scatter plot
+bwplot(rValues,metric="ROC")            # boxplot
+parallelplot(rValues,metric="ROC")  # parallel plot
+dotplot(rValues,metric="ROC")           # dotplot
+splom(rValues,metric="ROC")
+#################################################
 
 
-system.time(gbmTune <- train(Os_type ~ ., data = gbmTrain,
-                             method = "gbm",
-                             metric = "ROC",
-                             verbose = FALSE,  
-                         #    tuneGrid=grid,
-                             trControl = ctrl))
+##########################################################
+#--------- generate ROC curves for the methods -----------
+# # Generate an ROC curve for the rf method
+predRF <- prediction(rf_pred[,1], rm_test$PREGNANT)
+perfRF <- performance(predRF, "tpr", "fpr")
+#----- another option ----------------------------------
+auc2 = as.numeric(performance(predRF, "auc")@y.values)
 
+plot(perfRF, main = "ROC curves for randomForest, gbm and bag models")
 
+# Generate an ROC curve for the gbm method
+pred_gbm <- prediction(gbm_pred[,1], rm_test$PREGNANT)
+perf_gbm <- performance(pred_gbm, "tpr", "fpr")
+plot(perf_gbm, add = TRUE, col = "blue")
+
+#Generate an ROC curve for the 'bag' method
+pred_bag <- prediction(bag_pred[,1], rm_test$PREGNANT)
+perf_bag <- performance(pred_bag, "tpr", "fpr")
+plot(perf_bag, add = TRUE, col = "red")
+
+# Add legends to the plot
+legend("right", legend = c("randomForest", "gbm", "bag"), bty = "n", cex = 1, lty = 1,
+       col = c("black", "blue", "red"))
+#-----------------------------------------------------
+########################################################
 
 
 

@@ -68,6 +68,14 @@ sum(diag(table(test$label, prediction_knn)))/nrow(test)
 #------------------------------------------------------------------
 #--------------- RANDOM FOREST ------------------------------------
 # mtry - how many features to be used in every tree
+# ------ example trainControl for binary classification ------------
+#ensCtrl<- trainControl(method="cv",
+#                       number=10,
+#                       savePredictions=TRUE,
+#                       allowParallel=TRUE,
+#                       classProbs=TRUE,
+#                       selectionFunction="best",
+#                       summaryFunction=twoClassSummary)
 rfFit <- train(label ~ ., data = train_1000, method = "rf", trControl = ctrl,tuneLength = 3)
 rfFit
 #---------------- train model -------------------------------------
@@ -79,6 +87,9 @@ rfFit <- randomForest(label ~ ., data = train[sample(nrow(train), size = 15000),
 prediction_rf<-predict(rfFit,test)
 table(test$label, prediction_rf)
 rfFit
+
+importance(rfFit$finalModel, type=1)
+varImp(rfFit)
 #------------------- accuaracy---------------------------------------
 sum(diag(table(test$label, prediction_rf)))/nrow(test)
 

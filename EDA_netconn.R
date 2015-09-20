@@ -37,6 +37,8 @@ library(class)
 library(kernlab)
 library(pROC)                
 library(corrplot) 
+library(shinysky)
+#shinysky::run.shinysky.example()
 
 
 netconn <- read.csv("~/Documents/Datasets/R-code/Datasets/1.netconn.csv", stringsAsFactors=TRUE)
