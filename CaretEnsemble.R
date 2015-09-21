@@ -7,6 +7,10 @@
 #modelLookup("gbm")
 #getModelInfo("pls")
 
+#https://github.com/gdwangh/edxTheAnalyticsEdge/blob/master/kaggleCompetition/otherShared/Mario%20Segal/Competition.R
+
+#VERY GOOD - model compare
+#https://github.com/gdwangh/edxTheAnalyticsEdge/blob/master/kaggleCompetition/otherShared/ebrucecfa/Kaggle_ModelCompare.R
 
 library(doParallel)
 cl<- makeCluster(detectCores()-1)  
