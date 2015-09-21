@@ -1,9 +1,9 @@
 #http://www.r-bloggers.com/how-to-perform-a-logistic-regression-in-r/
 #http://www.r-bloggers.com/evaluating-logistic-regression-models/
 options(java.parameters = "- Xmx1024m")
-lapply(c("devtools", "sna", "intergraph", "igraph", "network"), install.packages)
-lapply(c("sna", "intergraph", "GGally", "igraph", "network"), 
-       require, character.only=T)
+#lapply(c("devtools", "sna", "intergraph", "igraph", "network"), install.packages)
+#lapply(c("sna", "intergraph", "GGally", "igraph", "network"), 
+#       require, character.only=T)
 
 
 library(chron)
